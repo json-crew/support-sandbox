@@ -1,0 +1,68 @@
+name: build-deploy
+
+# Odpowiednik build-deploy.yml Huba (F-217): workflow_dispatch z `environment` i booleanami
+# `deploy_*`. Tu wyłącznie echo — nic nie jest wdrażane. Panel dispatchuje z `ref = tag`
+# `deploy/<displayKey>/<sha7>` (K-40, O-3), korelacja przez `workflow_run.head_branch == tag`
+# (F-216). `run-name` zawiera ref, żeby run był rozpoznawalny także w UI.
+run-name: "deploy ${{ inputs.environment }} @ ${{ github.ref_name }}"
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "stage | production"
+        required: true
+        type: choice
+        options: [stage, production]
+      app_version:
+        description: "Etykieta wersji (pełny mergeSha) — tylko etykieta"
+        required: false
+        type: string
+      deploy_api:
+        type: boolean
+        default: true
+      deploy_web:
+        type: boolean
+        default: false
+      deploy_web_v2:
+        type: boolean
+        default: true
+      deploy_notification:
+        type: boolean
+        default: false
+      force_rebuild:
+        type: boolean
+        default: false
+      skip_tests:
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    name: Deploy (echo)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    environment: ${{ inputs.environment }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Print inputs
+        env:
+          INPUT_ENVIRONMENT: ${{ inputs.environment }}
+          INPUT_APP_VERSION: ${{ inputs.app_version }}
+          INPUT_DEPLOY_API: ${{ inputs.deploy_api }}
+          INPUT_DEPLOY_WEB: ${{ inputs.deploy_web }}
+          INPUT_DEPLOY_WEB_V2: ${{ inputs.deploy_web_v2 }}
+          INPUT_DEPLOY_NOTIFICATION: ${{ inputs.deploy_notification }}
+          INPUT_FORCE_REBUILD: ${{ inputs.force_rebuild }}
+          INPUT_SKIP_TESTS: ${{ inputs.skip_tests }}
+          REF_NAME: ${{ github.ref_name }}
+          REF_TYPE: ${{ github.ref_type }}
+        run: |
+          echo "ref=${REF_NAME} ref_type=${REF_TYPE} sha=${GITHUB_SHA}"
+          echo "environment=${INPUT_ENVIRONMENT} app_version=${INPUT_APP_VERSION}"
+          echo "deploy_api=${INPUT_DEPLOY_API} deploy_web=${INPUT_DEPLOY_WEB} deploy_web_v2=${INPUT_DEPLOY_WEB_V2} deploy_notification=${INPUT_DEPLOY_NOTIFICATION}"
+          echo "force_rebuild=${INPUT_FORCE_REBUILD} skip_tests=${INPUT_SKIP_TESTS}"
+          echo "HEAD=$(git rev-parse HEAD)"
